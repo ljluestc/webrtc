@@ -4,11 +4,12 @@
 //go:build !js
 // +build !js
 
-package webrtc
+package examples
 
 import (
 	"github.com/pion/interceptor"
 	"github.com/pion/logging"
+	"github.com/pion/webrtc/v4/pkg/rtcerr"
 )
 
 // API allows configuration of a PeerConnection
@@ -23,6 +24,10 @@ type API struct {
 
 	interceptor interceptor.Interceptor // Generated per PeerConnection
 }
+
+// settingEngine allows influencing behavior in ways that are not
+// supported by the WebRTC API. This allows us to support additional
+// use-cases without deviating from the WebRTC API elsewhere.
 
 // NewAPI Creates a new API object for keeping semi-global settings to WebRTC objects
 //

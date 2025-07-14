@@ -10,6 +10,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"log"
 	"sync"
 	"time"
 
@@ -411,8 +412,14 @@ func (r *RTPReceiver) readRTP(b []byte, reader *TrackRemote) (n int, a intercept
 		return 0, nil, io.EOF
 	}
 
+	log.Printf("RTPReceiver.readRTP: called")
+
 	if t := r.streamsForTrack(reader); t != nil {
-		return t.rtpInterceptor.Read(b, a)
+		n, a, err = t.rtpInterceptor.Read(b, a)
+
+		log.Printf("RTPReceiver.readRTP: finished")
+
+		return n, a, err
 	}
 
 	return 0, nil, fmt.Errorf("%w: %d", errRTPReceiverWithSSRCTrackStreamNotFound, reader.SSRC())
@@ -549,6 +556,8 @@ func (r *RTPReceiver) receiveForRtx(
 			}
 		}
 	}()
+
+	log.Printf("RTPReceiver.receiveForRtx: finished")
 
 	return nil
 }

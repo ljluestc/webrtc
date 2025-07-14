@@ -63,7 +63,31 @@ type NotSupportedError struct {
 func (e *NotSupportedError) Error() string {
 	return fmt.Sprintf("NotSupportedError: %v", e.Err)
 }
+// SPDX-FileCopyrightText: 2023 The Pion community <https://pion.ly>
+// SPDX-License-Identifier: MIT
 
+// Package rtcerr contains WebRTC-specific errors
+package rtcerr
+
+import "errors"
+
+// Common error types defined by the WebRTC spec
+var (
+	// ErrInvalidModification indicates an invalid modification was attempted
+	ErrInvalidModification = errors.New("invalid modification")
+
+	// ErrInvalidState indicates an operation was attempted in an invalid state
+	ErrInvalidState = errors.New("invalid state")
+
+	// ErrInvalidParameter indicates that a parameter was invalid
+	ErrInvalidParameter = errors.New("invalid parameter")
+
+	// ErrUnsupportedOperation indicates that an operation is not supported
+	ErrUnsupportedOperation = errors.New("unsupported operation")
+
+	// ErrOperationError indicates an operation failed for an unknown reason
+	ErrOperationError = errors.New("operation error")
+)
 // Unwrap returns the result of calling the Unwrap method on err, if err's type contains
 // an Unwrap method returning error. Otherwise, Unwrap returns nil.
 func (e *NotSupportedError) Unwrap() error {

@@ -15,6 +15,7 @@ import (
 	"io"
 	"math/rand"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -51,6 +52,26 @@ func TestPeerConnection_Media_Sample(t *testing.T) {
 		expectedTrackID  = "video"
 		expectedStreamID = "pion"
 	)
+
+	// Reduce timeout for the test
+	timeout := 30 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	// Start a goroutine to fail the test if it times out
+	go func() {
+		select {
+		case <-ctx.Done():
+			t.Log("TestPeerConnection_Media_Sample: timeout reached, dumping goroutines")
+			// Optionally print goroutine stack traces for debugging
+			buf := make([]byte, 1<<20)
+			stacklen := runtime.Stack(buf, true)
+			t.Logf("=== BEGIN Goroutine stack dump ===\n%s\n=== END Goroutine stack dump ===", buf[:stacklen])
+			t.FailNow()
+		}
+	}()
+
+	t.Log("TestPeerConnection_Media_Sample: test started")
 
 	lim := test.TimeOut(time.Second * 30)
 	defer lim.Stop()
@@ -214,6 +235,8 @@ func TestPeerConnection_Media_Sample(t *testing.T) {
 
 	closePairNow(t, pcOffer, pcAnswer)
 	<-awaitRTPRecvClosed
+
+	t.Log("TestPeerConnection_Media_Sample: test completed")
 }
 
 // PeerConnection should be able to be torn down at anytime
@@ -419,6 +442,28 @@ func filterSDPExtensions(offer string) (filteredSDP string) {
 	}
 
 	return
+}
+
+// TestingT is an interface wrapper for testing.T
+type TestingT interface {
+	Errorf(format string, args ...interface{})
+	FailNow()
+	Helper()
+}
+
+// sendVideoUntilDone sends video samples until the done channel is closed
+func sendVideoUntilDone(t TestingT, done chan struct{}, writers []*TrackLocalStaticSample) {
+	for {
+		select {
+		case <-done:
+			return
+		default:
+			for _, writer := range writers {
+				assert.NoError(t, writer.WriteSample(media.Sample{Data: []byte{0x00}, Duration: time.Second}))
+			}
+			time.Sleep(20 * time.Millisecond)
+		}
+	}
 }
 
 // If a SessionDescription has a single media section and no SSRC

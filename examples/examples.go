@@ -95,7 +95,32 @@ func serve(addr string) error {
 					example,
 					exampleType == "js",
 				}
+// SPDX-FileCopyrightText: 2023 The Pion community <https://pion.ly>
+// SPDX-License-Identifier: MIT
 
+// Package examples contains example code for the Pion WebRTC library
+package examples
+
+import (
+	"fmt"
+)
+
+// ListExamples prints information about available examples
+func ListExamples() {
+	fmt.Println("WebRTC Examples:")
+	fmt.Println("- data-channels: WebRTC data channels example")
+	fmt.Println("- rtp-forwarder: Forward RTP packets")
+	fmt.Println("- save-to-disk: Save media to disk")
+	fmt.Println("- simulcast: WebRTC simulcast example")
+	fmt.Println("- ... and more in the examples directory")
+}
+
+// RunExample is a placeholder for running examples
+func RunExample(name string) error {
+	fmt.Printf("Running example: %s\n", name)
+	fmt.Println("This is just a placeholder. Real examples should be run from their respective directories.")
+	return nil
+}
 				err = temp.Execute(res, data)
 				if err != nil {
 					panic(err)

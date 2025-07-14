@@ -23,9 +23,10 @@ import (
 
 // Certificate represents a x509Cert used to authenticate WebRTC communications.
 type Certificate struct {
-	privateKey crypto.PrivateKey
-	x509Cert   *x509.Certificate
-	statsID    string
+	privateKey  crypto.PrivateKey
+	x509Cert    *x509.Certificate
+	statsID     string
+	Certificate []any
 }
 
 // NewCertificate generates a new x509 compliant Certificate to be used
@@ -158,7 +159,11 @@ func GenerateCertificate(secretKey crypto.PrivateKey) (*Certificate, error) {
 //
 // This can be used if you want to share a certificate across multiple PeerConnections.
 func CertificateFromX509(privateKey crypto.PrivateKey, certificate *x509.Certificate) Certificate {
-	return Certificate{privateKey, certificate, fmt.Sprintf("certificate-%d", time.Now().UnixNano())}
+	return Certificate{
+		privateKey: privateKey,
+		x509Cert:   certificate,
+		statsID:    fmt.Sprintf("certificate-%d", time.Now().UnixNano()),
+	}
 }
 
 func (c Certificate) collectStats(report *statsReportCollector) error {

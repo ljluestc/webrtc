@@ -7,6 +7,7 @@
 package webrtc
 
 import (
+	"log"
 	"sync"
 	"time"
 
@@ -110,7 +111,8 @@ func (t *TrackRemote) Codec() RTPCodecParameters {
 }
 
 // Read reads data from the track.
-func (t *TrackRemote) Read(b []byte) (n int, attributes interceptor.Attributes, err error) {
+func (t *TrackRemote) Read(b []byte) (n int, a interceptor.Attributes, err error) {
+	log.Printf("TrackRemote.Read: called")
 	t.mu.RLock()
 	receiver := t.receiver
 	peeked := t.peeked != nil
@@ -119,7 +121,7 @@ func (t *TrackRemote) Read(b []byte) (n int, attributes interceptor.Attributes, 
 	if peeked {
 		t.mu.Lock()
 		data := t.peeked
-		attributes = t.peekedAttributes
+		peekedAttributes := t.peekedAttributes
 
 		t.peeked = nil
 		t.peekedAttributes = nil
@@ -130,28 +132,31 @@ func (t *TrackRemote) Read(b []byte) (n int, attributes interceptor.Attributes, 
 			n = copy(b, data)
 			err = t.checkAndUpdateTrack(b)
 
-			return n, attributes, err
+			log.Printf("TrackRemote.Read: returned n=%d, err=%v", n, err)
+			return n, peekedAttributes, err
 		}
 	}
 
 	// If there's a separate RTX track and an RTX packet is available, return that
 	if rtxPacketReceived := receiver.readRTX(t); rtxPacketReceived != nil {
 		n = copy(b, rtxPacketReceived.pkt)
-		attributes = rtxPacketReceived.attributes
+		a = rtxPacketReceived.attributes
 		rtxPacketReceived.release()
 		err = nil
 	} else {
 		// If there's no separate RTX track (or there's a separate RTX track but no RTX packet waiting), wait for and return
 		// a packet from the main track
-		n, attributes, err = receiver.readRTP(b, t)
+		n, a, err = receiver.readRTP(b, t)
 		if err != nil {
-			return n, attributes, err
+			log.Printf("TrackRemote.Read: returned n=%d, err=%v", n, err)
+			return n, a, err
 		}
 
 		err = t.checkAndUpdateTrack(b)
 	}
 
-	return n, attributes, err
+	log.Printf("TrackRemote.Read: returned n=%d, err=%v", n, err)
+	return n, a, err
 }
 
 // checkAndUpdateTrack checks payloadType for every incoming packet
@@ -182,23 +187,25 @@ func (t *TrackRemote) checkAndUpdateTrack(b []byte) error {
 
 // ReadRTP is a convenience method that wraps Read and unmarshals for you.
 func (t *TrackRemote) ReadRTP() (*rtp.Packet, interceptor.Attributes, error) {
+	log.Printf("TrackRemote.ReadRTP: called")
 	b := make([]byte, t.receiver.api.settingEngine.getReceiveMTU())
-	i, attributes, err := t.Read(b)
+	i, attrs, err := t.Read(b)
 	if err != nil {
-		return nil, nil, err
+		return nil, attrs, err
 	}
 
 	r := &rtp.Packet{}
 	if err := r.Unmarshal(b[:i]); err != nil {
-		return nil, nil, err
+		return nil, attrs, err
 	}
 
-	return r, attributes, nil
+	log.Printf("TrackRemote.ReadRTP: returned pkt=%v, err=%v", r, err)
+	return r, attrs, nil
 }
 
 // peek is like Read, but it doesn't discard the packet read.
-func (t *TrackRemote) peek(b []byte) (n int, a interceptor.Attributes, err error) {
-	n, a, err = t.Read(b)
+func (t *TrackRemote) peek(b []byte) (n int, attrs interceptor.Attributes, err error) {
+	n, attrs, err = t.Read(b)
 	if err != nil {
 		return
 	}
@@ -208,9 +215,9 @@ func (t *TrackRemote) peek(b []byte) (n int, a interceptor.Attributes, err error
 	// and us getting the lock.  Oh well, we'll just drop a packet in
 	// that case.
 	data := make([]byte, n)
-	n = copy(data, b[:n])
+	copy(data, b[:n])
 	t.peeked = data
-	t.peekedAttributes = a
+	t.peekedAttributes = attrs
 	t.mu.Unlock()
 
 	return
